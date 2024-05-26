@@ -18,7 +18,9 @@ const pool = new Pool(
 // defining inquirer questions
 const questions = [
     {   name: 'options', type:'list', message: `Options:\n`,
-        choices: ['View all departments', 'View all roles', 'View all employees', 'Add a department', 'Add a role', 'Add an employee', 'Update an employee role'],
+        choices: [ 'View all departments', 'View all roles', 'View all employees', 
+            'Add a department', 'Add a role', 'Add an employee', 'Update an employee role'
+        ],
     }
 ]
 
@@ -33,5 +35,5 @@ const options = {
 }
 
 inquirer.prompt(questions).then(answers => {
-    U.c(options['View all departments']())
+    console.log(c('test', 'r'), options[answers.options]() )
 })
