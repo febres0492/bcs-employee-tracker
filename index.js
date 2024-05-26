@@ -1,5 +1,6 @@
 const inquirer = require('inquirer')
 const c = require('./lib/utils').c
+const U = require('./lib/utils')
 const { Pool } = require('pg');
 const PORT = process.env.PORT || 3001;
 
@@ -21,8 +22,16 @@ const questions = [
     }
 ]
 
-// defining inquirer questions for adding a department
-const addDepartmentQuestions = [
-    {   name: 'department', type:'input', message: `Enter the department name: ` }
-]
+const options = {
+    'View all departments': U.viewDepartments,
+    'View all roles': U.viewRoles,
+    'View all employees': U.viewEmployees,
+    'Add a department': U.addDepartment,
+    'Add a role': U.addRole,
+    'Add an employee': U.addEmployee,
+    'Update an employee role': U.updateEmployeeRole
+}
 
+inquirer.prompt(questions).then(answers => {
+    U.c(options['View all departments']())
+})
