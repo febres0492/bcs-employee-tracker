@@ -18,7 +18,6 @@
     "homepage": "https://github.com/febres0492/bcs-employee-tracker#readme",
     "dependencies": {
         "colors": "^1.4.0",
-        "dotenv": "^16.4.5",
         "inquirer": "^8.2.4",
         "pg": "^8.11.5"
     }

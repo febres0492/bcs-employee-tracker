@@ -1,19 +1,20 @@
 const inquirer = require('inquirer')
 const c = require('./lib/utils').c
 const U = require('./lib/utils')
-const { Pool } = require('pg');
-const PORT = process.env.PORT || 3001;
+const { Pool } = require('pg')
 
-// Connect to the database
-const pool = new Pool(
-    {
-      user: 'postgres',
-      password: '0492',
-      host: 'localhost',
-      database: 'departments',
-    },
-    console.log(`Connected to the departments database.`)
-)
+let dbName = 'postgres'
+const databaseConfig = {
+    user: 'postgres',
+    password: '0492',
+    host: 'localhost',
+    database: dbName,
+    port: 5432,
+}
+
+const pool = new Pool(databaseConfig)
+
+U.listDatabases(pool);
 
 // defining inquirer questions
 const questions = [
@@ -25,15 +26,16 @@ const questions = [
 ]
 
 const options = {
+    'Add a department': U.addDepartment,
+    'Add an employee': U.addEmployee,
+    'Add a role': U.addRole,
+    'Update an employee role': U.updateEmployeeRole,
     'View all departments': U.viewDepartments,
     'View all roles': U.viewRoles,
     'View all employees': U.viewEmployees,
-    'Add a department': U.addDepartment,
-    'Add a role': U.addRole,
-    'Add an employee': U.addEmployee,
-    'Update an employee role': U.updateEmployeeRole
 }
 
-inquirer.prompt(questions).then(answers => {
-    console.log(c('test', 'r'), options[answers.options]() )
-})
+// inquirer.prompt(questions).then(answers => {
+//     answers.options = 'Add a department'
+//     options[answers.options](pool)
+// })
