@@ -11,10 +11,22 @@ const databaseConfig = {
     database: dbName,
     port: 5432,
 }
-
 const pool = new Pool(databaseConfig)
 
-U.listDatabases(pool);
+// checking if database exists
+let newDbName = 'employee_db'
+U.validateDB(pool, newDbName)
+
+// creating a new database
+// let newDbName = 'employee_db'
+// const query = [
+//     // `DROP DATABASE IF EXISTS ${newDbName};`, 
+//     `CREATE DATABASE ${newDbName};`
+// ]
+// U.DB(pool, query, (res) => {
+//     console.log('res',res)
+// })
+
 
 // defining inquirer questions
 const questions = [
