@@ -12,24 +12,15 @@ const databaseConfig = {
     port: 5432,
 }
 
-async function main(){
-    let pool = new Pool(databaseConfig)
-
-    // checking if database exists
-    let newDbName = 'employee_db'
-    await U.validateDB(pool, newDbName)
-
-    // connecting to the new database
-    pool = new Pool({...databaseConfig, database: newDbName})
-    
-    // creating tables
-    await U.createTable(pool)
-
-
+const options = {
+    'Add a department': `INSERT INTO department (name) VALUES ('Engineering');`,
+    'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('John', 'Doe', 1, 1);`,
+    'Add a role': `INSERT INTO role (title, salary, department_id) VALUES ('Software Engineer', 90000, 1);`,
+    'Update an employee role': `SELECT * FROM employee;`,
+    'View all departments': `SELECT * FROM department;`,
+    'View all roles': `SELECT * FROM role;`,
+    'View all employees': `SELECT * FROM employee;`,
 }
-main()
-
-
 
 // defining inquirer questions
 const questions = [
@@ -40,17 +31,28 @@ const questions = [
     }
 ]
 
-const options = {
-    'Add a department': U.addDepartment,
-    'Add an employee': U.addEmployee,
-    'Add a role': U.addRole,
-    'Update an employee role': U.updateEmployeeRole,
-    'View all departments': U.viewDepartments,
-    'View all roles': U.viewRoles,
-    'View all employees': U.viewEmployees,
-}
+async function main(){
+    let pool = new Pool(databaseConfig)
 
-// inquirer.prompt(questions).then(answers => {
-//     answers.options = 'Add a department'
-//     options[answers.options](pool)
-// })
+    // checking if database exists
+    let newDbName = 'employee_db'
+    U.validateDB(pool, newDbName)
+
+    // connecting to the new database
+    pool = new Pool({...databaseConfig, database: newDbName})
+    
+    // creating tables
+    await U.createTable(pool)
+
+    const answers = await inquirer.prompt(questions)
+    const query = options[answers.options]
+    const res = U.processQuery(pool, query)
+
+    console.log(c(res.rows))
+    console.time('Time taken')
+
+    pool.end()
+    console.timeEnd('Time taken')
+
+}
+main()
