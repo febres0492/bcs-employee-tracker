@@ -16,38 +16,18 @@ async function main(){
     let pool = new Pool(databaseConfig)
 
     // checking if database exists
-    let newDbName = 'employee_test3'
+    let newDbName = 'employee_db'
     await U.validateDB(pool, newDbName)
 
     // connecting to the new database
     pool = new Pool({...databaseConfig, database: newDbName})
-    const query = `SELECT current_database()`
+    
+    // creating tables
+    await U.createTable(pool)
 
-    U.processQuery(pool, query).then(async (res, client) => {
-        console.log(res)
-    })
+
 }
-
 main()
-// console.log(24, pool)
-
-// const query = `
-//     INSERT INTO ${newDbName} (name, position, department, salary)
-//     VALUES ($1, $2, $3, $4)
-//     RETURNING *;
-// `;
-
-// const query = `
-//     CREATE TABLE employees (
-//         id SERIAL PRIMARY KEY,
-//         name VARCHAR(100),
-//         position VARCHAR(100),
-//         department VARCHAR(100),
-//         salary NUMERIC
-//     );
-// `
-
-
 
 
 
