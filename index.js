@@ -1,5 +1,5 @@
 const inquirer = require('inquirer')
-const c = require('./lib/utils').c
+const c = require('./lib/utils').c // this is to give colors to the console.log
 const U = require('./lib/utils')
 const { Pool } = require('pg')
 
@@ -12,51 +12,6 @@ const databaseConfig = {
     port: 5432,
 }
 
-
-// defining inquirer questions
-const exitText = c('Exit program?\n', 'y')
-const inquirerQuestions = {
-    'initialQuestion': [
-        {   name: 'options', type:'list', message: `Options:`,
-            choices: [ 'View all departments', 'View all roles', 'View all employees', 
-                'Add a department', 'Add a role', 'Add an employee', 'Update an employee role', 
-                'Remove a department', 'Remove a role', 'Remove an employee', 'Remove an employee role',
-                exitText
-            ],
-        }
-    ],
-    'Add a department': [
-        { name: 'name', type: 'input', message: 'Enter department name:', validate: function(value) {
-            if (value.length) {
-                return true;
-            } else {
-                return 'Please enter a department name';
-            }
-        }}
-    ],
-    'Remove a department': [
-        { name: 'name', type: 'input', message: 'Enter department name:' }
-    ],
-    'Add an employee': [
-        { name: 'first_name', type: 'input', message: 'Enter first name:' },
-        { name: 'last_name', type: 'input', message: 'Enter last name:' },
-        { name: 'role_id', type: 'input', message: 'Enter role id:' },
-        { name: 'manager_id', type: 'input', message: 'Enter manager id:' },
-    ],
-    'Add a role': [
-        { name: 'title', type: 'input', message: 'Enter role title:' },
-        { name: 'salary', type: 'input', message: 'Enter salary:' },
-        { name: 'department_id', type: 'input', message: 'Enter department id:' },
-    ],
-    'Update an employee role': [
-        { name: 'employee_id', type: 'input', message: 'Enter employee id:' },
-        { name: 'role_id', type: 'input', message: 'Enter role id:' },
-    ],
-    // [exitText]: [
-    //     { name: 'exit', type: 'list', message: `${c('End execution?\n','y')}`, choices: ['yes', 'no'] }
-    // ]
-}
-
 const queryOptions = {
     'Add a department': `INSERT INTO department (name) VALUES ('[name]');`,
     'Remove a department': `DELETE FROM department WHERE name = '[name]';`,
@@ -67,6 +22,8 @@ const queryOptions = {
     'View all roles': `SELECT * FROM role;`,
     'View all employees': `SELECT * FROM employee;`,
 }
+
+
 
 async function main(){
     let pool = new Pool(databaseConfig)
@@ -81,11 +38,62 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
+    // getting choices from database for inquirer questions
+    const getChoices = async (query) => {
+        const res = await U.processQuery(pool, query)
+        return res.rows.map(row => row.name)
+    }
+
+    // defining inquirer questions
+    const exitText = c('Exit program?\n', 'y')
+    const inquirerQuestions = {
+        'initialQuestion': [
+            {   name: 'options', type:'list', message: `Options:`,
+                choices: [ 
+                    'View all departments', 'View all roles', 'View all employees', 
+                    'Add a department', 'Add a role', 'Add an employee', 'Update an employee role', 
+                    'Remove a department', 'Remove a role', 'Remove an employee', exitText
+                ],
+            }
+        ],
+        'Add a department': [
+            { name: 'name', type: 'input', message: 'Enter department name:', validate: function(value) {
+                if (value.length) {
+                    return true;
+                } else {
+                    return 'Please enter a department name';
+                }
+            }}
+        ],
+        'Remove a department': [
+            { name: 'name', type: 'input', message: 'Enter department name:' }
+        ],
+        'Add an employee': [
+            { name: 'first_name', type: 'input', message: 'Enter first name:' },
+            { name: 'last_name', type: 'input', message: 'Enter last name:' },
+            { name: 'role_id', type: 'input', message: 'Enter role id:' },
+            { name: 'manager_id', type: 'input', message: 'Enter manager id:' },
+        ],
+        'Add a role': [
+            { name: 'title', type: 'input', message: 'Enter role title:' },
+            { name: 'salary', type: 'input', message: 'Enter salary:' },
+            // { name: 'department_id', type: 'input', message: 'Enter department id:' },
+            { 
+                name: 'department_id', type: 'list', message: 'Under what department:', 
+                choices: getChoices('View all departments')
+            },
+        ],
+        'Update an employee role': [
+            { name: 'employee_id', type: 'input', message: 'Enter employee id:' },
+            { name: 'role_id', type: 'input', message: 'Enter role id:' },
+        ],
+    }
+
     let continueExecution = true
     let curQuestion = inquirerQuestions['initialQuestion']
     let query = 'View all departments'
 
-    const exiting = async () => {
+    const exiting = () => {
         continueExecution = false
         console.log('Exiting program...')
         process.exit(0)
@@ -94,7 +102,6 @@ async function main(){
     while (continueExecution == true) {
 
         const answers = await inquirer.prompt(curQuestion)
-
 
         // checking if the user wants to exit the program
         if(answers.options ==  exitText){ exiting() }
@@ -105,7 +112,6 @@ async function main(){
             query = queryOptions[answers.options]
             continue
         } 
-        
 
         if(curQuestion == inquirerQuestions['initialQuestion']){ 
             query = queryOptions[answers.options]
@@ -127,12 +133,12 @@ async function main(){
         }
     }
 
-    const answers = await inquirer.prompt(questions['initialQuestion'])
-    // const query = options[answers.options]
+    // const answers = await inquirer.prompt(questions['initialQuestion'])
+    // // const query = options[answers.options]
     
-    const res = await U.processQuery(pool, query)
+    // const res = await U.processQuery(pool, query)
 
-    console.log(c(res.rows))
+    // console.log(c(res.rows))
 
     await pool.end()
 
