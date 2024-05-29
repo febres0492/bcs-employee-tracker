@@ -15,8 +15,8 @@ const databaseConfig = {
 const queryOptions = {
     'Add a department': `INSERT INTO department (name) VALUES ('[name]');`,
     'Remove a department': `DELETE FROM department WHERE name = '[name]';`,
-    'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('John', 'Doe', 1, 1);`,
-    'Add a role': `INSERT INTO role (title, salary, department_id) VALUES ('Software Engineer', 90000, 1);`,
+    'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('[first_name]', '[last_name]', '[role_id]', '[manager_id]');`,
+    'Add a role': `INSERT INTO role (title, salary, department_id) VALUES ('[title]', '[salary]', '[department_id]');`,
     'Update an employee role': `SELECT * FROM employee;`,
     'View all departments': `SELECT * FROM department;`,
     'View all roles': `SELECT * FROM role;`,
@@ -75,8 +75,7 @@ async function main(){
                 name: 'department_id', type: 'list', message: 'Under what department:', 
                 choices: async function(){
                     const res = await U.processQuery(pool, queryOptions['View all departments'])
-                    let choices = res.rows.map(row => {return { name: `${row.name}, id: ${row.id}`, value: row.id } })
-                    return choices
+                    return res.rows.map( row => { return { name: `Add to ${row.name} department, id: ${row.id}`, value: row.id } } )
                 },
             },
         ],
@@ -100,8 +99,6 @@ async function main(){
 
         const answers = await inquirer.prompt(curQuestion)
 
-        console.log('answers', answers)
-
         // checking if the user wants to exit the program
         if(answers.options ==  exitText){ exiting() }
 
@@ -116,7 +113,11 @@ async function main(){
             query = queryOptions[answers.options]
         }else{
             query = U.replacingPlaceHolders(query, answers )
+            debugger
         }
+
+        console.log('answers', answers)
+        console.log('query', query)
 
         const res = await U.processQuery(pool, query)
         console.log(c(res.rows),'\n')
