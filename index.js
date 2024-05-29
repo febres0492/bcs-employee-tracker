@@ -38,12 +38,6 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
-    // getting choices from database for inquirer questions
-    const getChoices = async (query) => {
-        const res = await U.processQuery(pool, query)
-        return res.rows.map(row => row.name)
-    }
-
     // defining inquirer questions
     const exitText = c('Exit program?\n', 'y')
     const inquirerQuestions = {
@@ -77,10 +71,13 @@ async function main(){
         'Add a role': [
             { name: 'title', type: 'input', message: 'Enter role title:' },
             { name: 'salary', type: 'input', message: 'Enter salary:' },
-            // { name: 'department_id', type: 'input', message: 'Enter department id:' },
             { 
                 name: 'department_id', type: 'list', message: 'Under what department:', 
-                choices: getChoices('View all departments')
+                choices: async function(){
+                    const res = await U.processQuery(pool, queryOptions['View all departments'])
+                    let choices = res.rows.map(row => {return { name: `${row.name}, id: ${row.id}`, value: row.id } })
+                    return choices
+                },
             },
         ],
         'Update an employee role': [
@@ -103,6 +100,8 @@ async function main(){
 
         const answers = await inquirer.prompt(curQuestion)
 
+        console.log('answers', answers)
+
         // checking if the user wants to exit the program
         if(answers.options ==  exitText){ exiting() }
 
@@ -118,11 +117,6 @@ async function main(){
         }else{
             query = U.replacingPlaceHolders(query, answers )
         }
-
-        // if(answers.options.indexOf('Remove') > -1){ 
-        //     query = U.replacingPlaceHolders(query, answers )
-        //     debugger
-        // }
 
         const res = await U.processQuery(pool, query)
         console.log(c(res.rows),'\n')
