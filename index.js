@@ -17,13 +17,13 @@ const queryOptions = {
     'Remove a department': `DELETE FROM department WHERE name = '[name]';`,
     'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('[first_name]', '[last_name]', '[role_id]', '[manager_id]');`,
     'Add a role': `INSERT INTO role (title, salary, department_id) VALUES ('[title]', '[salary]', '[department_id]');`,
+    'Remove a role': `DELETE FROM role WHERE title = '[title]';`,
     'Update an employee role': `SELECT * FROM employee;`,
     'View all departments': `SELECT * FROM department;`,
     'View all roles': `SELECT * FROM role;`,
     'View all employees': `SELECT * FROM employee;`,
+    'View all employees by manager': `SELECT * FROM employee WHERE manager_id = '[manager_id]';`
 }
-
-
 
 async function main(){
     let pool = new Pool(databaseConfig)
@@ -51,33 +51,46 @@ async function main(){
             }
         ],
         'Add a department': [
-            { name: 'name', type: 'input', message: 'Enter department name:', validate: function(value) {
-                if (value.length) {
-                    return true;
-                } else {
-                    return 'Please enter a department name';
-                }
-            }}
+            { name: 'name', type: 'input', message: 'Enter department name:', 
+                validate: (val) => val.length ? true : 'Please enter a department name'
+            }
         ],
         'Remove a department': [
             { name: 'name', type: 'input', message: 'Enter department name:' }
         ],
         'Add an employee': [
-            { name: 'first_name', type: 'input', message: 'Enter first name:' },
-            { name: 'last_name', type: 'input', message: 'Enter last name:' },
-            { name: 'role_id', type: 'input', message: 'Enter role id:' },
-            { name: 'manager_id', type: 'input', message: 'Enter manager id:' },
+            { name: 'first_name', type: 'input', message: `Enter ${c('First name')}:` },
+            { name: 'last_name', type: 'input', message: `Enter ${c('Last name')}:` },
+            { name: 'role_id', type: 'list', message: 'Under What Role:', 
+                choices: async ()=> {
+                    const res = await U.processQuery(pool, queryOptions['View all roles'])
+                    return [...res.rows.map( row => { return { 'name': row.title, 'value': row.id } } ), { 'name': 'None', 'value': null }]
+                }
+            },
+            { name: 'manager_id', type: 'list', message: 'Under what Manager:', 
+                choices: async ()=> {
+                    const res = await U.processQuery(pool, queryOptions['View all employees by manager'])
+                    return [...res.rows.map( row => { return { 'name': `${row.first_name} ${row.last_name}`, 'value': row.id } } ), { 'name': 'None', 'value': null }]
+                }
+            },
         ],
         'Add a role': [
             { name: 'title', type: 'input', message: 'Enter role title:' },
             { name: 'salary', type: 'input', message: 'Enter salary:' },
-            { 
-                name: 'department_id', type: 'list', message: 'Under what department:', 
-                choices: async function(){
+            { name: 'department_id', type: 'list', message: 'Under what department do you want to add it:', 
+                choices: async ()=>{
                     const res = await U.processQuery(pool, queryOptions['View all departments'])
-                    return res.rows.map( row => { return { name: `Add to ${row.name} department, id: ${row.id}`, value: row.id } } )
+                    return [...res.rows.map( row => { return { 'name': row.name, 'value': row.id } } ), { 'name': 'None', 'value': null }]
                 },
             },
+        ],
+        'Remove a role': [
+            { name: 'title', type: 'list', message: `What role do you want to ${c('remove','r')}:`, 
+                choices: async ()=>{
+                    const res = await U.processQuery(pool, queryOptions['View all roles'])
+                    return [...res.rows.map( row => { return { 'name': row.title, 'value': row.title } } ), { 'name': 'None', 'value': null }]
+                },
+            }
         ],
         'Update an employee role': [
             { name: 'employee_id', type: 'input', message: 'Enter employee id:' },
@@ -113,31 +126,24 @@ async function main(){
             query = queryOptions[answers.options]
         }else{
             query = U.replacingPlaceHolders(query, answers )
-            debugger
         }
 
         console.log('answers', answers)
         console.log('query', query)
 
+        // debugger
+
         const res = await U.processQuery(pool, query)
-        console.log(c(res.rows),'\n')
+        console.table(res.rows)
+        // res.rows.forEach( row => console.log(row) )
+        console.log('\n') // just to make the console look better
 
         // resetting the question to the initial question
         if(curQuestion != inquirerQuestions['initialQuestion']){
             curQuestion = inquirerQuestions['initialQuestion']
         }
     }
-
-    // const answers = await inquirer.prompt(questions['initialQuestion'])
-    // // const query = options[answers.options]
-    
-    // const res = await U.processQuery(pool, query)
-
-    // console.log(c(res.rows))
-
     await pool.end()
-
-    // this is just to stop the process. sometimes it takes over 5 seconds to stop
-    process.exit(0)
+    process.exit(0) // this is just to stop the process. Sometimes it takes too long to stop
 }
 main()
