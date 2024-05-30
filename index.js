@@ -21,7 +21,7 @@ const queryOptions = {
     'View all employees by role': `SELECT * FROM employee WHERE role_id = [role_id];`,
     'View all managers': `SELECT * FROM employee WHERE manager_id IS null;`,
     'Add a department': `INSERT INTO department (name) VALUES ('[name]');`,
-    'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, position, manager_id) VALUES ('[first_name]', '[last_name]', [role_id], [position], [manager_id]);`,
+    'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, position, manager_id) VALUES ('[first_name]', '[last_name]', [role_id], (SELECT title FROM role WHERE id = [role_id]), [manager_id]);`,
     'Add a role': `INSERT INTO role (id, title, salary, department_id) VALUES ('[id]', '[title]', [salary], [department_id]);`,
     'Update an employee role': `SELECT * FROM employee;`,
     'Remove a department': `DELETE FROM department WHERE id = [id];`,
