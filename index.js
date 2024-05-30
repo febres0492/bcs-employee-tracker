@@ -12,6 +12,12 @@ const databaseConfig = {
     port: 5432,
 }
 
+// const department_id = `SELECT id FROM department WHERE name = '[department]'`
+const employeePosition = 'SELECT title FROM role WHERE id = [role_id]'
+const department_id = `SELECT department_id FROM role WHERE id = [role_id]`
+const employeeDepartment = `SELECT department FROM role WHERE id = [role_id]`
+const roleDepartment = 'SELECT name FROM department WHERE id = [department_id]'
+
 const queryOptions = {
     'View all departments': `SELECT * FROM department;`,
     'View all roles': `SELECT * FROM role;`,
@@ -21,8 +27,19 @@ const queryOptions = {
     'View all employees by role': `SELECT * FROM employee WHERE role_id = [role_id];`,
     'View all managers': `SELECT * FROM employee WHERE manager_id IS null;`,
     'Add a department': `INSERT INTO department (name) VALUES ('[name]');`,
-    'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, position, manager_id) VALUES ('[first_name]', '[last_name]', [role_id], (SELECT title FROM role WHERE id = [role_id]), [manager_id]);`,
-    'Add a role': `INSERT INTO role (id, title, salary, department_id) VALUES ('[id]', '[title]', [salary], [department_id]);`,
+    'Add an employee': `
+        INSERT INTO employee (first_name, last_name, role_id, position, department_id, department, manager_id) 
+        VALUES (
+            '[first_name]', 
+            '[last_name]', 
+            [role_id], 
+            (${employeePosition}), 
+            (${department_id}), 
+            (${employeeDepartment}), 
+            [manager_id]
+        );
+    `,
+    'Add a role': `INSERT INTO role (title, salary, department_id, department) VALUES ('[title]', [salary], [department_id], (${roleDepartment}));`,
     'Update an employee role': `SELECT * FROM employee;`,
     'Remove a department': `DELETE FROM department WHERE id = [id];`,
     'Remove a role': `DELETE FROM role WHERE title = '[title]';`,
@@ -42,7 +59,7 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
-    // const test = await U.processQuery(pool, `ALTER TABLE employee ADD COLUMN position VARCHAR(30) REFERENCES role(title);`)
+    // const test = await U.processQuery(pool, `ALTER TABLE role ADD COLUMN department VARCHAR(30) REFERENCES department(name);`)
     // console.log(test)
 
     // defining inquirer questions
@@ -187,7 +204,7 @@ async function main(){
 
         // console.log('answers', answers)
         console.log('query', query)
-
+        if(curQuestion == inquirerQuestions['Add an employee']) console.log('answers', answers)
         // debugger
 
         const res = await U.processQuery(pool, query)
