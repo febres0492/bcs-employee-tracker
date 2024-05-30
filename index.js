@@ -12,12 +12,6 @@ const databaseConfig = {
     port: 5432,
 }
 
-// const department_id = `SELECT id FROM department WHERE name = '[department]'`
-const employeePosition = 'SELECT title FROM role WHERE id = [role_id]'
-const department_id = `SELECT department_id FROM role WHERE id = [role_id]`
-const employeeDepartment = `SELECT department FROM role WHERE id = [role_id]`
-const roleDepartment = 'SELECT name FROM department WHERE id = [department_id]'
-
 const queryOptions = {
     'View all departments': `SELECT * FROM department;`,
     'View all roles': `SELECT * FROM role;`,
@@ -28,18 +22,22 @@ const queryOptions = {
     'View all managers': `SELECT * FROM employee WHERE manager_id IS null;`,
     'Add a department': `INSERT INTO department (name) VALUES ('[name]');`,
     'Add an employee': `
-        INSERT INTO employee (first_name, last_name, role_id, position, department_id, department, manager_id) 
+        INSERT INTO employee (first_name, last_name, role_id, position, department_id, department, manager_id, manager) 
         VALUES (
             '[first_name]', 
             '[last_name]', 
             [role_id], 
-            (${employeePosition}), 
-            (${department_id}), 
-            (${employeeDepartment}), 
-            [manager_id]
+            (SELECT title FROM role WHERE id = [role_id]), 
+            (SELECT department_id FROM role WHERE id = [role_id]), 
+            (SELECT department FROM role WHERE id = [role_id]), 
+            [manager_id],
+            (SELECT CONCAT(first_name, ' ', last_name) FROM employee WHERE id = [manager_id])
         );
     `,
-    'Add a role': `INSERT INTO role (title, salary, department_id, department) VALUES ('[title]', [salary], [department_id], (${roleDepartment}));`,
+    'Add a role': `
+        INSERT INTO role (title, salary, department_id, department) 
+        VALUES ('[title]', [salary], [department_id], (SELECT name FROM department WHERE id = [department_id]));
+    `,
     'Update an employee role': `SELECT * FROM employee;`,
     'Remove a department': `DELETE FROM department WHERE id = [id];`,
     'Remove a role': `DELETE FROM role WHERE title = '[title]';`,
@@ -60,10 +58,16 @@ async function main(){
     await U.createTable(pool)
 
     // const test = await U.processQuery(pool, `ALTER TABLE role ADD COLUMN department VARCHAR(30) REFERENCES department(name);`)
+    // const test = await U.processQuery(pool, `ALTER TABLE employee ADD COLUMN manager VARCHAR(30);`)
     // console.log(test)
 
+    const getChoices = async (pool, queryString, keysArray) => {
+        const res = await U.processQuery(pool,  queryOptions[queryString])
+        return res.rows.map( row => { return { 'name': row[keysArray[0]], 'value': row[keysArray[1]] } } )
+    }
+
     // defining inquirer questions
-    const exitText = c('Exit program?\n', 'y')
+    const exitText = c('-- Exit program --', 'y')
     const inquirerQuestions = {
         'initialQuestion': [
             {   name: 'options', type:'list', message: `Options:`,
@@ -77,10 +81,11 @@ async function main(){
         ],
         'View all employees by manager': [
             { name: 'manager_id', type: 'list', message: 'Select a manager:',
-                choices: async ()=> {
-                    const res = await U.processQuery(pool, queryOptions['View all managers'])
-                    return [...res.rows.map( row => { return { 'name': `${row.first_name} ${row.last_name}`, 'value': row.id } } ), { 'name': 'None', 'value': null }]
-                }
+                choices: getChoices(pool, 'View all managers', ['first_name', 'last_name', 'id'])
+                // choices: async ()=> {
+                //     const res = await U.processQuery(pool, queryOptions['View all managers'])
+                //     return [...res.rows.map( row => { return { 'name': `${row.first_name} ${row.last_name}`, 'value': row.id } } ), { 'name': 'None', 'value': null }]
+                // }
             }
         ],
         'View all employees by department': [
@@ -208,7 +213,14 @@ async function main(){
         // debugger
 
         const res = await U.processQuery(pool, query)
-        console.table(res.rows)
+        
+        if(answers.options == 'View all employees'){ 
+            let filteredColumns = Object.keys(res.rows[0]).filter( key => !['role_id', 'manager_id'].includes(key))
+            console.table(res.rows, filteredColumns)
+        } else {
+            console.table(res.rows)
+        }
+        
         // res.rows.forEach( row => console.log(row) )
         console.log('\n') // just to make the console look better
 
