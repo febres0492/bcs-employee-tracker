@@ -22,7 +22,7 @@ const queryOptions = {
     'View all managers': `SELECT * FROM employee WHERE manager_id IS null;`,
     'Add a department': `INSERT INTO department (name) VALUES ('[name]');`,
     'Add an employee': `INSERT INTO employee (first_name, last_name, role_id, position, manager_id) VALUES ('[first_name]', '[last_name]', [role_id], [position], [manager_id]);`,
-    'Add a role': `INSERT INTO role (title, salary, department_id) VALUES ('[title]', [salary], [department_id]);`,
+    'Add a role': `INSERT INTO role (id, title, salary, department_id) VALUES ('[id]', '[title]', [salary], [department_id]);`,
     'Update an employee role': `SELECT * FROM employee;`,
     'Remove a department': `DELETE FROM department WHERE id = [id];`,
     'Remove a role': `DELETE FROM role WHERE title = '[title]';`,
@@ -42,7 +42,7 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
-    const test = await U.processQuery(pool, `ALTER TABLE employee ADD COLUMN position VARCHAR(30) REFERENCES role(title);`)
+    // const test = await U.processQuery(pool, `ALTER TABLE employee ADD COLUMN position VARCHAR(30) REFERENCES role(title);`)
     // console.log(test)
 
     // defining inquirer questions
@@ -90,11 +90,11 @@ async function main(){
         ],
         'Add an employee': [
             { name: 'first_name', type: 'input', message: `Enter ${c('First Name')}:`, 
-                validate: (val) => val.length ? true : 'Please enter a first name',
+                validate: (val) => val.length > 0 ? true : 'Please enter a first name',
                 filter: (val) => U.capFirst(val.trim())
             },
             { name: 'last_name', type: 'input', message: `Enter ${c('Last Name')}:`,
-                validate: (val) => val.length ? true : 'Please enter a last name',
+                validate: (val) => val.length > 0 ? true : 'Please enter a last name',
                 filter: (val) => U.capFirst(val.trim())
             },
             { name: 'role_id', type: 'list', message: 'Under What Role:', 
@@ -112,12 +112,11 @@ async function main(){
         ],
         'Add a role': [
             { name: 'title', type: 'input', message: 'Enter role title:',
-                validate: (val) => val.length ? true : 'Please enter a role title',
+                validate: (val) => val.length > 0 ? true : 'Please enter a role title',
                 filter: (val) => U.capFirst(val.trim())
             },
             { name: 'salary', type: 'input', message: 'Enter salary:', 
-                validate: (val) => val.length ? true : 'Please enter a salary',
-                filter: (val) => parseFloat(val)
+                validate: (val) => val.length > 0 ? true : 'Please enter a salary',
             },
             { name: 'department_id', type: 'list', message: 'Under what department do you want to add it:', 
                 choices: async ()=>{
