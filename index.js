@@ -25,22 +25,15 @@ const queryOptions = {
     'Add a department': `INSERT INTO department (name) VALUES ('[name]');`,
     'Add an employee': `
         INSERT INTO employee (first_name, last_name, role_id, position, department_id, department, manager_id, manager) 
-        VALUES (
-            '[first_name]', 
-            '[last_name]', 
-            [role_id], 
-            (SELECT title FROM role WHERE id = [role_id]), 
-            (SELECT department_id FROM role WHERE id = [role_id]), 
-            (SELECT department FROM role WHERE id = [role_id]), 
-            [manager_id],
-            (SELECT CONCAT(first_name, ' ', last_name) FROM employee WHERE id = [manager_id])
+        VALUES ( 
+            '[first_name]', '[last_name]', [role_id], (SELECT title FROM role WHERE id = [role_id]), (SELECT department_id FROM role WHERE id = [role_id]), 
+            (SELECT department FROM role WHERE id = [role_id]), [manager_id], (SELECT CONCAT(first_name, ' ', last_name) FROM employee WHERE id = [manager_id])
         );
     `,
     'Add a role': `
         INSERT INTO role (title, salary, department_id, department) 
         VALUES ('[title]', [salary], [department_id], (SELECT name FROM department WHERE id = [department_id]));
     `,
-    // 'Update an employee': `SELECT * FROM employee;`,
     'Remove a department': `DELETE FROM department WHERE id = [id];`,
     'Remove a role': `DELETE FROM role WHERE title = '[title]';`,
     'Remove an employee': `DELETE FROM employee WHERE id = [employee_id];`,
@@ -138,16 +131,29 @@ async function main(){
         ],
         'Update an employee': [
             { name: 'employee_id', type: 'list', message: 'Select an employee:',
-                choices: async () => await getChoices(pool, q['View all employees'], ['first_name, last_name', 'id'] , {}, true)
+                choices: async () => await getChoices(pool, q['View all employees'], ['first_name, last_name', 'id'] , {})
             },
             { name: 'selected_column', type: 'list', message: 'Select a column to update:', 
                 when: (answers) => answers.employee_id != null,
-                choices: async () => (await getChoices(pool, queryOptions2['Update an employee'], ['column_name', 'column_name'] , {}, true))
+                choices: async () => (await getChoices(pool, queryOptions2['Update an employee'], ['column_name', 'column_name'] , {}))
                     .filter( col => col.name != 'id' && col.name.indexOf('_id') == -1) 
             },
             { name: 'new_value', type: 'input', message: 'Enter new value:', 
+                when: (answers) => answers.selected_column != 'manager',
                 validate: (val) => (''+val).length > 0 ? true : 'Please enter a value',
             },
+            // updating employee's mananger
+            { name: 'new_value', type: 'list', message: 'Select a manager:',
+                when: (answers) => answers.selected_column == 'manager',
+                choices: async  () => await getChoices(pool, q['View all managers'], ['first_name, last_name', 'id'] ),
+                filter: async  (val) => {
+                    let data = await getChoices(pool, q['View all managers'], ['first_name, last_name', 'id'] , {})
+                    data = data.filter( row => (row.value+'') == (val+''))
+                    console.log('\n',c('val'), val)
+                    console.log('\n',c('data'), data)
+                    return data
+                }
+            }
         ],
         'Remove a department': [
             { name: 'name', type: 'input', message: 'What department would you like to remove:',
@@ -190,6 +196,7 @@ async function main(){
             continue
         } 
 
+        // formating query
         if(curQuestion == inquirerQuestions['initialQuestion']){ 
             query = queryOptions[answers.options]
         }else{
@@ -209,7 +216,7 @@ async function main(){
                 const sortedData = res.rows.sort((a, b) => a.id - b.id)
                 let filteredColumns = Object.keys(res.rows[0]).filter( key => key.indexOf('_id') == -1)
                 console.log('log 1')
-                console.table(sortedData, filteredColumns)
+                console.table(sortedData, [...filteredColumns, 'manager_id'])
             }
             catch(err){ 
                 console.log('log 2')
@@ -217,7 +224,7 @@ async function main(){
             }
         } else {
             console.log('log 3')
-            console.table(res)
+            console.table(res.rows)
         }
         
         console.log('\n') // just to make the console look better
