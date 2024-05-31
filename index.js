@@ -61,9 +61,10 @@ async function main(){
     // const test = await U.processQuery(pool, `ALTER TABLE employee ADD COLUMN manager VARCHAR(30);`)
     // console.log(test)
 
-    const getChoices = async (pool, queryString, keysArray) => {
+    const getChoices = async (pool, queryString, keysArray, otherValsObj = { 'name': 'None', 'value': null }) => {
         const res = await U.processQuery(pool,  queryOptions[queryString])
-        return res.rows.map( row => { return { 'name': row[keysArray[0]], 'value': row[keysArray[1]] } } )
+        const vals = (row, keysStr)=> keysStr.split(',').map( key => row[key.trim()]).join(' ')
+        return [...res.rows.map( row => { return { 'name': vals(row, keysArray[0]), 'value': vals(row, keysArray[1]) } } ), otherValsObj]
     }
 
     // defining inquirer questions
@@ -81,27 +82,17 @@ async function main(){
         ],
         'View all employees by manager': [
             { name: 'manager_id', type: 'list', message: 'Select a manager:',
-                choices: getChoices(pool, 'View all managers', ['first_name', 'last_name', 'id'])
-                // choices: async ()=> {
-                //     const res = await U.processQuery(pool, queryOptions['View all managers'])
-                //     return [...res.rows.map( row => { return { 'name': `${row.first_name} ${row.last_name}`, 'value': row.id } } ), { 'name': 'None', 'value': null }]
-                // }
+                choices: async  () => await getChoices(pool, 'View all managers', ['first_name, last_name', 'id'] )
             }
         ],
         'View all employees by department': [
             { name: 'department_id', type: 'list', message: 'Select a department:',
-                choices: async ()=> {
-                    const res = await U.processQuery(pool, queryOptions['View all departments'])
-                    return [...res.rows.map( row => { return { 'name': row.name, 'value': row.id } } ), { 'name': 'None', 'value': null }]
-                }
+                choices: async  () => await getChoices(pool, 'View all departments', ['name', 'id'] )
             }
         ],
         'View all employees by role': [
             { name: 'role_id', type: 'list', message: 'Select a role:',
-                choices: async ()=> {
-                    const res = await U.processQuery(pool, queryOptions['View all roles'])
-                    return [...res.rows.map( row => { return { 'name': row.title, 'value': row.id } } ), { 'name': 'None', 'value': null }]
-                }
+                choices: async  () => await getChoices(pool, 'View all roles', ['title', 'id'] )
             }
         ],
         'Add a department': [
@@ -120,16 +111,10 @@ async function main(){
                 filter: (val) => U.capFirst(val.trim())
             },
             { name: 'role_id', type: 'list', message: 'Under What Role:', 
-                choices: async ()=> {
-                    const res = await U.processQuery(pool, queryOptions['View all roles'])
-                    return [...res.rows.map( row => { return { 'name': row.title, 'value': row.id } } ), { 'name': 'None', 'value': null }]
-                }
+                choices: async  () => await getChoices(pool, 'View all roles', ['title', 'id'] )
             },
             { name: 'manager_id', type: 'list', message: 'Under what Manager:', 
-                choices: async ()=> {
-                    const res = await U.processQuery(pool, queryOptions['View all managers'])
-                    return [...res.rows.map( row => { return { 'name': `${row.first_name} ${row.last_name}`, 'value': row.id } } ), { 'name': 'None', 'value': null }]
-                }
+                choices: async  () => await getChoices(pool, 'View all managers', ['first_name, last_name', 'id'] )
             },
         ],
         'Add a role': [
@@ -141,10 +126,7 @@ async function main(){
                 validate: (val) => val.length > 0 ? true : 'Please enter a salary',
             },
             { name: 'department_id', type: 'list', message: 'Under what department do you want to add it:', 
-                choices: async ()=>{
-                    const res = await U.processQuery(pool, queryOptions['View all departments'])
-                    return [...res.rows.map( row => { return { 'name': row.name, 'value': row.id } } ), { 'name': 'None', 'value': null }]
-                },
+                choices: async  () => await getChoices(pool, 'View all departments', ['name', 'id'] )
             },
         ],
         'Update an employee role': [
@@ -153,27 +135,18 @@ async function main(){
         ],
         'Remove a department': [
             { name: 'name', type: 'input', message: 'What department would you like to remove:',
-                choices: async ()=> {
-                    const res = await U.processQuery(pool, queryOptions['View all departments'])
-                    return [...res.rows.map( row => { return { 'name': row.name, 'value': row.id } } )]
-                }
+                choices: async  () => await getChoices(pool, 'View all departments', ['name', 'id'] )
             }
         ],
         'Remove a role': [
             { name: 'title', type: 'list', message: `What role do you want to ${c('remove','r')}:`, 
-                choices: async ()=>{
-                    const res = await U.processQuery(pool, queryOptions['View all roles'])
-                    return [...res.rows.map( row => { return { 'name': row.title, 'value': row.title } } ), { 'name': 'None', 'value': null }]
-                },
+                choices: async  () => await getChoices(pool, 'View all roles', ['title', 'title'] )
             }
         ],
         'Remove an employee': [
             { name: 'employee_id', type: 'list', message: 'What Employee would you like to remove:',
-                choices: async ()=>{
-                    const res = await U.processQuery(pool, queryOptions['View all employees'])
-                    return [...res.rows.map( row => { return { 'name': `${row.first_name} ${row.last_name}`, 'value': row.id } } )]
-                }
-             },
+                choices: async  () => await getChoices(pool, 'View all employees', ['first_name, last_name', 'id'] )
+            },
         ],
     }
 
@@ -214,14 +187,13 @@ async function main(){
 
         const res = await U.processQuery(pool, query)
         
-        if(answers.options == 'View all employees'){ 
-            let filteredColumns = Object.keys(res.rows[0]).filter( key => !['role_id', 'manager_id'].includes(key))
-            console.table(res.rows, filteredColumns)
-        } else {
-            console.table(res.rows)
-        }
+        // if(answers.options?.indexOf('View all em') != -1){ 
+        //     let filteredColumns = Object.keys(res.rows[0]).filter( key => key.indexOf('_id') == -1)
+        //     console.table(res.rows, filteredColumns)
+        // } else {
+        // }
+        console.table(res.rows)
         
-        // res.rows.forEach( row => console.log(row) )
         console.log('\n') // just to make the console look better
 
         // resetting the question to the initial question
