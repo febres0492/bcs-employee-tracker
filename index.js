@@ -25,9 +25,6 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
-    // const test = await U.processQuery(pool, `ALTER TABLE role ADD COLUMN department VARCHAR(30) REFERENCES department(name);`)
-    // const test = await U.processQuery(pool, `ALTER TABLE role DROP COLUMN manager_id; `)
-
     // defining inquirer questions
     const exitText = c('-- Exit program --', 'y')
     const inquirerQuestions = U.getInquirerQuestions(pool, U.queryOptions, exitText)
@@ -55,55 +52,21 @@ async function main(){
             query = U.queryOptions[answers.options]
             continue
         } 
-
-        // formating query
-        const formatingQuery = (queries, answers) => {
-            return queries.map(q =>{
-                if(curQuestion == inquirerQuestions['initialQuestion']){ 
-                    return U.queryOptions[answers.options]
-                }else{
-                    return  (U.replacingPlaceHolders(q, answers )).replace('= null', 'IS null')
-                }
-            })
-        }
-
-        const sendQuery = async (pool, query, answers) => {
-            console.log('query ----:', typeof query, query)
-            for (const q of query) {
-                const res = await U.processQuery(pool, q)
-                
-                if (answers.options?.indexOf('View all') !== -1) {
-                    try {
-                        const sortedData = res.rows.sort((a, b) => a.id - b.id)
-                        const filteredColumns = Object.keys(res.rows[0]).filter(key => key.indexOf('_id') === -1)
-                        console.log('log 1')
-                        console.table(sortedData, filteredColumns)
-                    } catch (err) {
-                        console.log('log 2')
-                        res.command && console.log(res.command)
-                        res.rows && console.table(res.rows)
-                    }
-                } else {
-                    console.log('log 3')
-                    res.rows && console.table(res.rows)
-                }
-            }
-        }
         
         // checking if the user selected the manager column
         if(answers.hasOwnProperty('selected_column') && answers.selected_column == 'manager'){
             const columns = ['manager_id', 'manager']
             query = columns.map( col => {
-                const obj = {'selected_column': col, 'new_value': answers.new_value.value, 'employee_id': answers.employee_id}
-                if(col == 'manager') obj.new_value = answers.new_value.name
-                return formatingQuery(query, obj)
+                const obj = {'selected_column': col, 'new_value': answers.new_value?.value, 'employee_id': answers.employee_id}
+                if(col == 'manager') {obj.new_value = answers.new_value.name}
+                return U.formatingQuery(query, curQuestion, obj, answers)
             })
 
         }else{
-            query = formatingQuery(query, answers)
+            query = U.formatingQuery(query, curQuestion, inquirerQuestions,  answers)
         }
 
-        await sendQuery(pool, query, answers)
+        await U.sendQuery(pool, query, answers)
         
         // resetting the question to the initial question
         if(curQuestion != inquirerQuestions['initialQuestion']){
