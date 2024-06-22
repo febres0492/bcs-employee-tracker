@@ -25,6 +25,9 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
+    // const test = await U.processQuery(pool, `ALTER TABLE employee RENAME COLUMN position TO role; `)
+    // const test = await U.processQuery(pool, `ALTER TABLE role DROP COLUMN manager_id; `)
+
     // defining inquirer questions
     const exitText = c('-- Exit program --', 'y')
     const inquirerQuestions = U.getInquirerQuestions(pool, U.queryOptions, exitText)
@@ -40,6 +43,8 @@ async function main(){
     }
 
     while (continueExecution == true) {
+        console.log('\n') // adding space between questions
+        console.log(c(`If choices not responding tap ${c('Enter')} then arrow down.`,'gy'))
 
         const answers = await inquirer.prompt(curQuestion)
 
