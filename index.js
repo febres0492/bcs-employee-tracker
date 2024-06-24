@@ -25,20 +25,12 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
-    const exitText = c('< Exit program >', 'y')
-    
     // defining inquirer questions
-    const inquirerQuestions = U.getInquirerQuestions({pool, exitText})
+    const inquirerQuestions = U.getInquirerQuestions({ pool })
     
     let continueExecution = true
     let curQuestion = inquirerQuestions['initialQuestion']
     let query = ['View all departments']
-
-    const exiting = () => {
-        continueExecution = false
-        console.log('Exiting program...')
-        process.exit(0)
-    }
 
     while (continueExecution == true) {
         console.log('\n') // adding space between questions
@@ -49,16 +41,21 @@ async function main(){
 
         const answers = await inquirer.prompt(curQuestion)
 
-        // restarting question if the user selects an invalid action
-        const exitValue = Object.values(answers).find( (val) => val.toLowerCase().indexOf('exit') > -1)
-        if(U.invalidActitonMessages.hasOwnProperty(exitValue)) { 
+        // restarting question if the user selects an invalid action or want to exit
+        let exitValue = Object.values(answers).find( (val) => val.toLowerCase().indexOf('exit') > -1)
+        exitValue = exitValue ? exitValue.toLowerCase() : null
+        if(U.actitonMessages.hasOwnProperty(exitValue)) { 
             curQuestion = inquirerQuestions['initialQuestion']
-            console.log(c(U.invalidActitonMessages[exitValue], 'y'))
+            console.log(c(U.actitonMessages[exitValue], 'y'))
             continue 
         } 
 
         // checking if the user wants to exit the program
-        if(answers.options ==  exitText){ exiting() }
+        if(answers.options ==  U.actitonMessages.exitText){ 
+            continueExecution = false
+            console.log('Exiting program...')
+            process.exit(0)
+        }
 
         // checking if answer is a key in inquirerQuestions
         if(Object.keys(inquirerQuestions).includes(answers.options)){
