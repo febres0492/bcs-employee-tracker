@@ -25,13 +25,11 @@ async function main(){
     // creating tables
     await U.createTable(pool)
 
-    // const test = await U.processQuery(pool, `ALTER TABLE employee RENAME COLUMN position TO role; `)
-    // const test = await U.processQuery(pool, `ALTER TABLE role DROP COLUMN manager_id; `)
-
+    const exitText = c('< Exit program >', 'y')
+    
     // defining inquirer questions
-    const exitText = c('-- Exit program --', 'y')
-    const inquirerQuestions = U.getInquirerQuestions(pool, U.queryOptions, exitText)
-
+    const inquirerQuestions = U.getInquirerQuestions({pool, exitText})
+    
     let continueExecution = true
     let curQuestion = inquirerQuestions['initialQuestion']
     let query = ['View all departments']
@@ -44,9 +42,20 @@ async function main(){
 
     while (continueExecution == true) {
         console.log('\n') // adding space between questions
-        console.log(c(`If choices not responding tap ${c('Enter')} then arrow down.`,'gy'))
+        console.log(c(`If choices not responding tap ${c('"Enter"')} then arrow down.`,'gy'))
+
+        // logging exit instructions
+        if(curQuestion[0].type == 'input'){console.log(c(`Enter ${c('"exit"')} to quit`, 'gy'))}
 
         const answers = await inquirer.prompt(curQuestion)
+
+        // restarting question if the user selects an invalid action
+        const exitValue = Object.values(answers).find( (val) => val.toLowerCase().indexOf('exit') > -1)
+        if(U.invalidActitonMessages.hasOwnProperty(exitValue)) { 
+            curQuestion = inquirerQuestions['initialQuestion']
+            console.log(c(U.invalidActitonMessages[exitValue], 'y'))
+            continue 
+        } 
 
         // checking if the user wants to exit the program
         if(answers.options ==  exitText){ exiting() }
@@ -58,23 +67,12 @@ async function main(){
             continue
         } 
         
-        // checking if the user selected the manager column
-        if(answers.hasOwnProperty('selected_column') && answers.selected_column == 'manager'){
-            const columns = ['manager_id', 'manager']
-            query = columns.map( col => {
-                const obj = {'selected_column': col, 'new_value': answers.new_value?.value, 'employee_id': answers.employee_id}
-                if(col == 'manager') {obj.new_value = answers.new_value.name}
-                return U.formatingQuery(query, curQuestion, obj, answers)
-            })
-
-        }else{
-            query = U.formatingQuery(query, curQuestion, inquirerQuestions,  answers)
-        }
+        query = U.formatingQuery(query, curQuestion, inquirerQuestions,  answers)
 
         await U.sendQuery(pool, query, answers)
         
         // resetting the question to the initial question
-        if(curQuestion != inquirerQuestions['initialQuestion']){
+        if(curQuestion != inquirerQuestions['initialQuestion'] ){
             curQuestion = inquirerQuestions['initialQuestion']
         }
     }
